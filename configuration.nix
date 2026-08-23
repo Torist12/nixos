@@ -118,21 +118,36 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-  #  vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-	wget
-	git
-	curl
-	vim
-	fastfetch
-	vscode.fhs
-	tmux
-	libreoffice
-	kitty
-	starship
-	zsh	
+  # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+  wget
+  git
+  curl
+  vim
+  fastfetch
+  vscode.fhs
+  tmux
+  libreoffice
+  kitty
+  starship
+  zsh
   btop
   cmatrix
   cbonsai
+  nodejs_22
+  python3
+  gcc
+  postman
+  dbeaver-bin
+  bun
+  rustup
+  cargo-watch
+  eza
+  bat
+  fzf
+  ripgrep
+  zoxide
+  lazygit
+  gh
   ];
 
   # zsh start
