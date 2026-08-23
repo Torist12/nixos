@@ -102,6 +102,7 @@
   users.users."will" = {
     isNormalUser = true;
     description = "will";
+    shell = pkgs.zsh;
     extraGroups = [ "networkmanager" "wheel" ];
     packages = with pkgs; [
       kdePackages.kate
