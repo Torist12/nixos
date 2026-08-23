@@ -123,6 +123,7 @@
   git
   curl
   vim
+  neovim
   fastfetch
   vscode.fhs
   tmux
