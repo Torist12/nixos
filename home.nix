@@ -41,6 +41,7 @@ programs.starship = {
       ll = "ls -la";
       rebuild = "sudo nixos-rebuild switch --flake /etc/nixos#konqi";
       update = "cd /etc/nixos && sudo nix flake update && sudo nixos-rebuild switch --flake /etc/nixos#konqi && cd -";
+      nixcode = "code /etc/nixos";
 };
   };
 
