@@ -27,6 +27,13 @@
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  boot.loader.systemd-boot.configurationLimit = 4;
+  
+  nix.gc = {
+  automatic = true;
+  dates = "weekly";
+  options = "--delete-older-than 30d";
+};
 
   # Use latest kernel.
   boot.kernelPackages = pkgs.linuxPackages_latest;
@@ -103,7 +110,7 @@
     isNormalUser = true;
     description = "will";
     shell = pkgs.zsh;
-    extraGroups = [ "networkmanager" "wheel" ];
+    extraGroups = [ "networkmanager" "wheel" "libvirtd"];
     packages = with pkgs; [
       kdePackages.kate
     #  thunderbird
@@ -151,6 +158,11 @@
   lazygit
   gh
   ];
+
+  # virt manager
+  virtualisation.libvirtd.enable = true;
+  programs.virt-manager.enable = true;
+  
 
   # zsh start
   programs.zsh.enable = true;
