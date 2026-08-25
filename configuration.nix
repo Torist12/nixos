@@ -28,7 +28,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 4;
-  
+
   nix.gc = {
   automatic = true;
   dates = "weekly";
@@ -146,6 +146,8 @@
   python3
   gcc
   postman
+  podman
+  distrobox
   dbeaver-bin
   bun
   rustup
@@ -162,6 +164,13 @@
   # virt manager
   virtualisation.libvirtd.enable = true;
   programs.virt-manager.enable = true;
+
+  # virtualisation podman
+  virtualisation.podman = {
+  enable = true;
+  dockerCompat = true;
+};
+
   
 
   # zsh start
