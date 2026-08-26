@@ -110,7 +110,7 @@
     isNormalUser = true;
     description = "will";
     shell = pkgs.zsh;
-    extraGroups = [ "networkmanager" "wheel" "libvirtd"];
+    extraGroups = [ "networkmanager" "wheel" "libvirtd" "dialout" "docker" "video" "audio" "input" "kvm" "users" ];
     packages = with pkgs; [
       kdePackages.kate
     #  thunderbird
@@ -159,6 +159,9 @@
   zoxide
   lazygit
   gh
+  nasm
+  gdb
+  steam-run
   ];
 
   # virt manager
@@ -169,9 +172,27 @@
   virtualisation.podman = {
   enable = true;
   dockerCompat = true;
-};
+  };
 
-  
+  # AppImage support
+  programs.appimage = {
+  enable = true;
+  binfmt = true;
+  };
+
+  # Steam support 
+  programs.steam = {
+  enable = true;
+  remotePlay.openFirewall = true;
+  dedicatedServer.openFirewall = true;
+  };
+
+
+  # Enable the OpenGL graphics drivers.
+  hardware.graphics = {
+  enable = true;
+  enable32Bit = true;
+  };
 
   # zsh start
   programs.zsh.enable = true;
