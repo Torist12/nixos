@@ -162,6 +162,7 @@
   nasm
   gdb
   steam-run
+  emacs
   ];
 
   # virt manager
