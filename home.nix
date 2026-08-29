@@ -121,6 +121,9 @@
     };
   };
 
+  programs.tmux.enable = true;
+  home.file.".tmux.conf".source = ./tmux.conf;
+
   home.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
