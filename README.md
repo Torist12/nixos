@@ -4,6 +4,8 @@ Configuração declarativa do host **konqi**, baseada em NixOS, Flakes e Home
 Manager. O repositório é a fonte de verdade para o sistema operacional e para
 o ambiente do usuário `will`.
 
+Versão 1.5.3
+
 | Propriedade | Valor |
 | --- | --- |
 | Host | `konqi` |
