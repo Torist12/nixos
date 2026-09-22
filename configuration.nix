@@ -10,6 +10,8 @@
       ./hardware-configuration.nix
     ];
 
+ 
+
   #flakes configuration
   nix.settings.experimental-features =[ "nix-command" "flakes" ];
 
@@ -163,6 +165,10 @@
   gdb
   steam-run
   emacs
+  wireguard-tools
+  qbittorrent
+  micro
+  clang-tools
   ];
 
   # virt manager

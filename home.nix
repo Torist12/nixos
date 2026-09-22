@@ -121,6 +121,28 @@
     };
   };
 
+programs.micro = {
+  enable = true;
+  settings = {
+    colorscheme = "monokai";
+    tabsize = 4;
+    tabstospaces = true;
+    autoindent = true;
+    syntax = true;
+    ruler = true;
+    softwrap = false;
+    scrollbar = true;
+    statusline = true;
+    mouse = true;
+    clipboard = "external";
+
+    # LSP
+    "lsp.server" = "c++=clangd,c=clangd,python=pyright-langserver --stdio,sh=bash-language-server start,rust=rust-analyzer";
+    "lsp.formatOnSave" = true;
+    "lsp.autocomplete" = true;
+    "lsp.diagnostics" = true;
+  };
+};
   programs.tmux = {
   enable = true;
   extraConfig = builtins.readFile ./tmux.conf;
