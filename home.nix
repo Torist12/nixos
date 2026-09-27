@@ -10,6 +10,8 @@
     viAlias = true;
     vimAlias = true;
     withNodeJs = true; # útil pra alguns plugins
+    withRuby = false;
+    withPython3 = false;
 
     extraPackages = with pkgs; [
       clang-tools   # clangd (LSP) + clang-format
