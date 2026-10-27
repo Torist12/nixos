@@ -154,4 +154,11 @@ programs.micro = {
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
   ];
+
+  imports = [
+    ./llama-cpp-nvim.nix
+  ];
+
+  programs.llama-cpp-nvim.enable = true;
+  
 }
