@@ -1,0 +1,6 @@
+{
+  "Name": "llama_ai",
+  "Description": "Local llama.cpp integration for Micro",
+  "Website": "https://github.com/ggml-org/llama.cpp",
+  "Tags": ["llm", "local"]
+}

@@ -49,6 +49,145 @@
           vim.lsp.config('clangd', {})
           vim.lsp.enable('clangd')
 
+      vim.g.llama_config = {
+        endpoint_fim = 'http://127.0.0.1:9931/infill',
+        endpoint_inst = 'http://127.0.0.1:9931/v1/chat/completions',
+        auto_fim = true,
+        fim_debounce_ms = 700,
+        n_predict = 64,
+        ring_n_chunks = 4,
+        ring_chunk_size = 32,
+        show_info = 1,
+      }
+      vim.cmd.packadd('llama.vim')
+
+      local aiStatusGeneration = 0
+      vim.keymap.set({ 'n', 'i' }, '<F4>', function()
+        vim.g.llama_config.auto_fim = not vim.g.llama_config.auto_fim
+        vim.fn['llama#setup_autocmds']()
+        if not vim.g.llama_config.auto_fim then
+          vim.fn['llama#fim_hide']()
+        end
+        aiStatusGeneration = aiStatusGeneration + 1
+        local generation = aiStatusGeneration
+        local state = vim.g.llama_config.auto_fim and 'online' or 'off'
+        vim.api.nvim_echo({ { 'Autocomplete de IA: ' .. state, 'MoreMsg' } }, false, {})
+        vim.defer_fn(function()
+          if generation == aiStatusGeneration then
+            vim.api.nvim_echo({ { "" } }, false, {})
+          end
+        end, 10000)
+      end, { desc = 'Alternar autocomplete de IA' })
+
+      local chatHistory = {}
+      local chatBuffer = nil
+      local chatJob = nil
+
+      local function setChatResponse(line, text)
+        if chatBuffer and vim.api.nvim_buf_is_valid(chatBuffer) then
+          vim.api.nvim_buf_set_lines(chatBuffer, line, line + 1, false, vim.split(text, '\n', { plain = true }))
+        end
+      end
+
+      local function sendChatMessage(prompt)
+        if prompt == nil or prompt:match('^%s*$') then
+          return
+        end
+        if chatJob then
+          vim.notify('Aguarde a resposta atual do chat.', vim.log.levels.WARN)
+          return
+        end
+
+        if not chatBuffer or not vim.api.nvim_buf_is_valid(chatBuffer) then
+          vim.cmd('botright 12new')
+          chatBuffer = vim.api.nvim_get_current_buf()
+          pcall(vim.api.nvim_buf_set_name, chatBuffer, 'llama-chat')
+          vim.bo[chatBuffer].buftype = 'nofile'
+          vim.bo[chatBuffer].bufhidden = 'hide'
+          vim.bo[chatBuffer].swapfile = false
+        else
+          local chatWindow = vim.fn.bufwinid(chatBuffer)
+          if chatWindow == -1 then
+            vim.cmd('botright 12split')
+            vim.api.nvim_win_set_buf(0, chatBuffer)
+          else
+            vim.api.nvim_set_current_win(chatWindow)
+          end
+        end
+
+        local responseLine = vim.api.nvim_buf_line_count(chatBuffer) + 1
+        vim.api.nvim_buf_set_lines(chatBuffer, -1, -1, false, {
+          'Você: ' .. prompt,
+          'IA: [gerando resposta...]',
+          "",
+        })
+        vim.api.nvim_win_set_cursor(0, { vim.api.nvim_buf_line_count(chatBuffer), 0 })
+
+        local messages = vim.deepcopy(chatHistory)
+        table.insert(messages, { role = 'user', content = prompt })
+        local payload = vim.json.encode({
+          model = 'micro-local',
+          messages = messages,
+          max_tokens = 512,
+          temperature = 0.3,
+          stream = false,
+        })
+        local stdout = {}
+        local stderr = {}
+        chatJob = vim.fn.jobstart({
+          'curl', '--fail', '--silent', '--show-error', '--max-time', '120',
+          '-H', 'Content-Type: application/json',
+          '--data-binary', payload,
+          vim.g.llama_config.endpoint_inst,
+        }, {
+          stdout_buffered = true,
+          stderr_buffered = true,
+          on_stdout = function(_, data)
+            stdout = data
+          end,
+          on_stderr = function(_, data)
+            stderr = data
+          end,
+          on_exit = function(_, exitCode)
+            vim.schedule(function()
+              chatJob = nil
+              if exitCode ~= 0 then
+                setChatResponse(responseLine, 'IA: erro: ' .. table.concat(stderr, '\n'))
+                return
+              end
+
+              local ok, response = pcall(vim.json.decode, table.concat(stdout, '\n'))
+              local answer = ok and response.choices
+                and response.choices[1]
+                and response.choices[1].message
+                and response.choices[1].message.content
+              if not answer then
+                setChatResponse(responseLine, 'IA: resposta inválida do servidor local.')
+                return
+              end
+
+              table.insert(chatHistory, { role = 'user', content = prompt })
+              table.insert(chatHistory, { role = 'assistant', content = answer })
+              setChatResponse(responseLine, 'IA: ' .. answer)
+            end)
+          end,
+        })
+        if chatJob <= 0 then
+          chatJob = nil
+          setChatResponse(responseLine, 'IA: não foi possível iniciar o curl.')
+        end
+      end
+
+      vim.api.nvim_create_user_command('LlamaChat', function(command)
+        local prompt = table.concat(command.fargs, ' ')
+        if prompt ~= "" then
+          sendChatMessage(prompt)
+          return
+        end
+        vim.ui.input({ prompt = 'Você: ' }, sendChatMessage)
+      end, { nargs = '*', desc = 'Conversar com a IA local' })
+      vim.keymap.set('n', '<F8>', '<Cmd>LlamaChat<CR>', { desc = 'Abrir chat da IA local' })
+
       -- Autocomplete
       local cmp = require('cmp')
       cmp.setup({

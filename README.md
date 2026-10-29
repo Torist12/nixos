@@ -80,6 +80,131 @@ executar `home-manager switch` separadamente.
 - Ferramentas de desenvolvimento, terminal e desktop, incluindo Git, Node.js,
   Python, GCC, Rustup, Bun, Neovim, VS Code, tmux e LibreOffice.
 
+## IA local com llama.cpp
+
+[`llama.cpp`](https://github.com/ggml-org/llama.cpp) é um runtime de inferência
+para executar modelos de linguagem localmente. Ele carrega modelos no formato
+GGUF, que podem ser quantizados para reduzir o uso de memória, e oferece o
+`llama-server`, um servidor HTTP que recebe prompts e devolve texto gerado.
+O projeto suporta diferentes hardwares e backends; neste setup, o pacote
+`pkgs.llama-cpp` é usado na configuração CPU do nixpkgs.
+
+O plugin [`llama.vim`](https://github.com/ggml-org/llama.vim) integra o editor
+ao servidor: pode solicitar sugestões de código com contexto antes e depois do
+cursor (Fill-in-the-Middle, ou FIM) e edição baseada em instruções. No Micro, o
+plugin local descrito abaixo usa diretamente a API HTTP do `llama-server`. O
+fluxo é:
+
+```text
+Micro -> llama-server em 127.0.0.1 -> modelo GGUF -> resposta ao editor
+```
+
+### O que esta configuração prepara
+
+O módulo `llama-cpp-nvim.nix`, importado e habilitado por `home.nix`:
+
+- Instala `llama.cpp` e cria o wrapper
+  `~/.local/share/llama-cpp/bin/llama-server`, que encaminha os argumentos ao
+  binário do nixpkgs.
+- Instala uma versão fixada do plugin `llama.vim` em
+  `~/.local/share/nvim/site/pack/ia/opt/llama.vim`.
+- Durante a ativação do Home Manager, baixa o modelo GGUF de código que ainda
+  faltar. Na primeira vez, é necessário ter internet; o arquivo ocupa cerca de
+  1,6 GB. Depois de baixado, o modelo pode ser usado sem rede.
+
+Os modelos são armazenados em `~/.local/share/llama-cpp/models/`:
+
+| Modelo | Caminho | Uso previsto |
+| --- | --- | --- |
+| Qwen2.5-Coder 1.5B Q8_0 | `qwen2.5-coder-1.5b-q8_0.gguf` | Sugestões FIM e chat local no Micro |
+
+Q8_0 é a quantização de 8 bits deste modelo. O serviço local usa esse mesmo
+GGUF para FIM e chat, evitando carregar dois modelos simultaneamente.
+
+### Estado da integração neste repositório
+
+O módulo instala o plugin `llama.vim`, e `initLua` o carrega com os endpoints do
+servidor local. No Neovim, o `llama.vim` produz ghost text FIM automaticamente
+após uma pausa ao digitar. A integração do Micro é independente e usa o mesmo
+servidor e modelo.
+
+### Integração no Micro
+
+Ao ativar `programs.llama-cpp-nvim`, o Home Manager instala um plugin Lua do
+Micro, um pequeno cliente HTTP baseado em `curl` e `jq`, e um serviço de usuário
+que inicia o `llama-server` automaticamente. O servidor usa o modelo
+Qwen2.5-Coder 1.5B Q8_0 e escuta somente em `127.0.0.1:9931`; o código e as
+perguntas enviados pelo editor não saem da máquina. A política CORS também é
+limitada a origens locais.
+
+| Atalho | Ação |
+| --- | --- |
+| Após 700 ms sem digitar | Solicita uma sugestão de código em segundo plano; a prévia aparece na barra de informações. |
+| `Tab` | Aceita a sugestão pronta; sem sugestão, mantém o autocomplete/indentação padrão do Micro. |
+| `F4` | Solicita uma sugestão imediatamente para o ponto do cursor. |
+| `F8` | Abre o campo de comando do Micro; digite a pergunta e pressione `Enter`. A conversa aparece em uma divisão e mantém o histórico durante a sessão do editor. |
+
+O plugin solicita sugestões automaticamente após 700 ms sem digitação; F4 ainda
+permite solicitar uma manualmente. Ele descarta a resposta se o texto ao redor
+do cursor mudar durante a geração. O Micro não fornece aos plugins Lua uma API
+de texto fantasma inline; por isso a prévia aparece na barra de informações e é
+aceita com Tab. A geração no CPU deste computador mede cerca de 4,56 tokens/s,
+portanto uma resposta ainda pode levar alguns segundos. F4 substitui a ação
+padrão de sair associada à tecla no Micro. Para testar se o terminal envia as
+teclas de função ao editor, use `> raw` no Micro.
+
+No Neovim, `llama.vim` é carregado pelo `initLua` e usa os mesmos endpoints
+locais. O plugin exibe texto fantasma inline automaticamente após a pausa
+configurada e aceita a sugestão com `Tab`; `Shift+Tab` aceita apenas a primeira
+linha. `nvim-cmp` continua como autocomplete LSP/buffer e compartilha a tecla
+Tab, que o plugin de IA intercepta quando há uma sugestão visível.
+
+O servidor e o cliente podem ser conferidos com:
+
+```bash
+systemctl --user status llama-micro-server
+curl -fsS http://127.0.0.1:9931/health
+```
+
+### Benchmark neste computador
+
+Medição local com `llama-bench`, pacote llama.cpp 0.5.0, backend CPU/BLAS,
+Intel Core i5-8365U (4 núcleos/8 threads), 16 GiB de RAM e Intel UHD 620
+integrada. A configuração Nix usa CPU, não descarrega camadas para a GPU. O
+teste processou um prompt de 256 tokens e gerou 64 tokens:
+
+| Modelo / threads | Prompt (tokens/s) | Geração (tokens/s) |
+| --- | ---: | ---: |
+| Qwen2.5-Coder 1.5B Q8_0, 4 threads | 16,90 ± 1,16 | 4,56 ± 0,08 |
+| Qwen2.5-Coder 1.5B Q8_0, 8 threads | 11,74 ± 0,37 | 2,13 ± 0,04 |
+
+Para este processador móvel, 4 threads foram mais rápidas e deixam recursos
+livres para o editor e o sistema. O modelo ocupa cerca de 1,53 GiB em disco;
+durante a inferência há também memória de contexto e buffers. Por isso, o
+mesmo modelo é usado para F4 e F8 em vez de manter dois modelos carregados.
+
+O arquivo Qwen3 4B Instruct Q4_K_M encontrado em `models/chat/` falhou na
+validação do GGUF (`tensor ... data is not within the file bounds`), então não
+foi possível medi-lo. A ativação não o baixa mais automaticamente e não apaga
+o arquivo existente. O modelo selecionado é menor, mas a qualidade de chat e
+código é inferior à de modelos maiores.
+
+O benchmark pode ser repetido com:
+
+```bash
+llama-bench -m ~/.local/share/llama-cpp/models/qwen2.5-coder-1.5b-q8_0.gguf -t 4 -p 256 -n 64 -r 3
+```
+
+Para aplicar o módulo e baixar os modelos, execute o rebuild habitual:
+
+```bash
+sudo nixos-rebuild switch --flake /etc/nixos#konqi
+```
+
+Consulte a documentação oficial de [llama.cpp](https://github.com/ggml-org/llama.cpp)
+e [llama.vim](https://github.com/ggml-org/llama.vim) para detalhes de servidor,
+opções de inferência e configuração do plugin.
+
 ## Editor: micro com LSP
 
 O `micro` é configurado declarativamente pelo `programs.micro` em
