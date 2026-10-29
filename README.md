@@ -123,10 +123,10 @@ GGUF para FIM e chat, evitando carregar dois modelos simultaneamente.
 
 ### Estado da integração neste repositório
 
-O módulo instala o plugin `llama.vim`, e `initLua` o carrega com os endpoints do
-servidor local. No Neovim, o `llama.vim` produz ghost text FIM automaticamente
-após uma pausa ao digitar. A integração do Micro é independente e usa o mesmo
-servidor e modelo.
+O módulo `llama-cpp-nvim.nix` instala o servidor local, o modelo, o plugin
+`llama.vim`, o cliente de chat do Micro e o comando de terminal `nixai`. Micro,
+Neovim e `nixai` usam o mesmo servidor e modelo local. As perguntas e o código
+enviados a esse serviço ficam na máquina.
 
 ### Integração no Micro
 
@@ -144,20 +144,59 @@ limitada a origens locais.
 | `F4` | Solicita uma sugestão imediatamente para o ponto do cursor. |
 | `F8` | Abre o campo de comando do Micro; digite a pergunta e pressione `Enter`. A conversa aparece em uma divisão e mantém o histórico durante a sessão do editor. |
 
-O plugin solicita sugestões automaticamente após 700 ms sem digitação; F4 ainda
-permite solicitar uma manualmente. Ele descarta a resposta se o texto ao redor
-do cursor mudar durante a geração. O Micro não fornece aos plugins Lua uma API
-de texto fantasma inline; por isso a prévia aparece na barra de informações e é
-aceita com Tab. A geração no CPU deste computador mede cerca de 4,56 tokens/s,
-portanto uma resposta ainda pode levar alguns segundos. F4 substitui a ação
-padrão de sair associada à tecla no Micro. Para testar se o terminal envia as
-teclas de função ao editor, use `> raw` no Micro.
+O plugin solicita sugestões automaticamente após 700 ms sem digitação e descarta
+a resposta se o texto ao redor do cursor mudar durante a geração. Como o Micro
+não oferece aos plugins Lua uma API de texto fantasma inline, a sugestão aparece
+na barra de informações e é aceita com `Tab`. `F4` substitui a ação padrão de
+sair associada à tecla no Micro. Para testar se o terminal envia teclas de
+função ao editor, use `> raw` no Micro.
 
-No Neovim, `llama.vim` é carregado pelo `initLua` e usa os mesmos endpoints
-locais. O plugin exibe texto fantasma inline automaticamente após a pausa
-configurada e aceita a sugestão com `Tab`; `Shift+Tab` aceita apenas a primeira
-linha. `nvim-cmp` continua como autocomplete LSP/buffer e compartilha a tecla
-Tab, que o plugin de IA intercepta quando há uma sugestão visível.
+Para conversar, pressione `F8`, digite `llama-chat sua pergunta` e pressione
+`Enter`. O Micro abre uma divisão para a conversa e mantém o histórico enquanto
+essa sessão do editor estiver aberta.
+
+### Integração no Neovim
+
+O `llama.vim` é carregado pelo `initLua` e solicita sugestões FIM ao servidor
+local após uma pausa ao digitar. O autocomplete LSP/buffer do `nvim-cmp` continua
+disponível junto com as sugestões da IA.
+
+| Atalho/comando | Ação |
+| --- | --- |
+| `F4` | Alterna o autocomplete automático da IA. Mostra `online` ou `off` por 10 segundos; cada toque alterna o estado e reinicia o temporizador. |
+| `Tab` | Aceita a sugestão da IA quando há texto fantasma visível; caso contrário, seleciona o próximo item do `nvim-cmp`. |
+| `Shift+Tab` | Aceita somente a primeira linha da sugestão da IA; sem sugestão, seleciona o item anterior do `nvim-cmp`. |
+| `F8` | Abre o campo de pergunta do chat local. A conversa aparece em uma divisão e mantém o histórico durante a sessão do Neovim. |
+| `:LlamaChat` | Abre o mesmo campo de pergunta do `F8`. Também aceita uma pergunta diretamente, por exemplo `:LlamaChat explique esta função`. |
+
+O estado `online` no aviso do `F4` significa que as sugestões automáticas estão
+ativadas; não é uma verificação de conectividade do servidor. O `F8` e o comando
+`:LlamaChat` enviam as mensagens para o endpoint local de chat e mostram as
+respostas no painel dedicado.
+
+### Chat no terminal
+
+O comando `nixai` inicia uma conversa interativa no terminal, usando o mesmo
+servidor e modelo. Durante cada solicitação, uma animação mostra que a IA está
+pensando; a resposta aparece quando a geração termina. O histórico é mantido
+durante a execução do comando, e a orientação inicial pede respostas diretas em
+português do Brasil, sem repetir a pergunta.
+
+```bash
+nixai
+```
+
+Digite uma pergunta no prompt `Você:`. Também é possível iniciar com uma pergunta
+na linha de comando; o programa responde e continua aberto para as próximas:
+
+```bash
+nixai "Como encontro arquivos maiores que 10 MB?"
+```
+
+Digite `/sair` para terminar. `/exit` e `/quit` também encerram a conversa.
+O comando é instalado pelo Home Manager quando a configuração é aplicada.
+
+### Serviço e diagnóstico
 
 O servidor e o cliente podem ser conferidos com:
 
