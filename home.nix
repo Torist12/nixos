@@ -61,27 +61,39 @@
       }
       vim.cmd.packadd('llama.vim')
 
-      local aiStatusGeneration = 0
-      vim.keymap.set({ 'n', 'i' }, '<F4>', function()
-        vim.g.llama_config.auto_fim = not vim.g.llama_config.auto_fim
-        vim.fn['llama#setup_autocmds']()
-        if not vim.g.llama_config.auto_fim then
+      local aiEnabled = true
+      local chatHistory = {}
+      local chatBuffer = nil
+      local chatJob = nil
+      local chatRequestGeneration = 0
+
+      local function toggleAI()
+        vim.fn['llama#toggle']()
+        aiEnabled = not aiEnabled
+        chatRequestGeneration = chatRequestGeneration + 1
+        if chatJob then
+          vim.fn.jobstop(chatJob)
+          chatJob = nil
+        end
+        if not aiEnabled then
           vim.fn['llama#fim_hide']()
         end
+
+        local state = aiEnabled and 'online' or 'off'
+        vim.api.nvim_echo({ { 'IA local: ' .. state, 'MoreMsg' } }, false, {})
+      end
+
+      local aiStatusGeneration = 0
+      vim.keymap.set({ 'n', 'i' }, '<F4>', function()
+        toggleAI()
         aiStatusGeneration = aiStatusGeneration + 1
         local generation = aiStatusGeneration
-        local state = vim.g.llama_config.auto_fim and 'online' or 'off'
-        vim.api.nvim_echo({ { 'Autocomplete de IA: ' .. state, 'MoreMsg' } }, false, {})
         vim.defer_fn(function()
           if generation == aiStatusGeneration then
             vim.api.nvim_echo({ { "" } }, false, {})
           end
         end, 10000)
-      end, { desc = 'Alternar autocomplete de IA' })
-
-      local chatHistory = {}
-      local chatBuffer = nil
-      local chatJob = nil
+      end, { desc = 'Ativar ou desativar IA local' })
 
       local function setChatResponse(line, text)
         if chatBuffer and vim.api.nvim_buf_is_valid(chatBuffer) then
@@ -91,6 +103,10 @@
 
       local function sendChatMessage(prompt)
         if prompt == nil or prompt:match('^%s*$') then
+          return
+        end
+        if not aiEnabled then
+          vim.notify('IA local desativada. Pressione F4 para reativar.', vim.log.levels.WARN)
           return
         end
         if chatJob then
@@ -134,6 +150,8 @@
         })
         local stdout = {}
         local stderr = {}
+        chatRequestGeneration = chatRequestGeneration + 1
+        local requestGeneration = chatRequestGeneration
         chatJob = vim.fn.jobstart({
           'curl', '--fail', '--silent', '--show-error', '--max-time', '120',
           '-H', 'Content-Type: application/json',
@@ -150,6 +168,9 @@
           end,
           on_exit = function(_, exitCode)
             vim.schedule(function()
+              if requestGeneration ~= chatRequestGeneration then
+                return
+              end
               chatJob = nil
               if exitCode ~= 0 then
                 setChatResponse(responseLine, 'IA: erro: ' .. table.concat(stderr, '\n'))
@@ -179,6 +200,10 @@
       end
 
       vim.api.nvim_create_user_command('LlamaChat', function(command)
+        if not aiEnabled then
+          vim.notify('IA local desativada. Pressione F4 para reativar.', vim.log.levels.WARN)
+          return
+        end
         local prompt = table.concat(command.fargs, ' ')
         if prompt ~= "" then
           sendChatMessage(prompt)
@@ -187,6 +212,7 @@
         vim.ui.input({ prompt = 'Você: ' }, sendChatMessage)
       end, { nargs = '*', desc = 'Conversar com a IA local' })
       vim.keymap.set('n', '<F8>', '<Cmd>LlamaChat<CR>', { desc = 'Abrir chat da IA local' })
+      vim.api.nvim_create_user_command('LlamaToggleAI', toggleAI, { desc = 'Ativar ou desativar a IA local' })
 
       -- Autocomplete
       local cmp = require('cmp')

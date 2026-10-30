@@ -163,16 +163,17 @@ disponível junto com as sugestões da IA.
 
 | Atalho/comando | Ação |
 | --- | --- |
-| `F4` | Alterna o autocomplete automático da IA. Mostra `online` ou `off` por 10 segundos; cada toque alterna o estado e reinicia o temporizador. |
+| `F4` | Liga ou desliga toda a IA local no Neovim, incluindo sugestões e chat. Ao desligar, cancela uma resposta em andamento. |
 | `Tab` | Aceita a sugestão da IA quando há texto fantasma visível; caso contrário, seleciona o próximo item do `nvim-cmp`. |
 | `Shift+Tab` | Aceita somente a primeira linha da sugestão da IA; sem sugestão, seleciona o item anterior do `nvim-cmp`. |
 | `F8` | Abre o campo de pergunta do chat local. A conversa aparece em uma divisão e mantém o histórico durante a sessão do Neovim. |
 | `:LlamaChat` | Abre o mesmo campo de pergunta do `F8`. Também aceita uma pergunta diretamente, por exemplo `:LlamaChat explique esta função`. |
+| `:LlamaToggleAI` | Alterna o mesmo estado de IA local do `F4`. |
 
-O estado `online` no aviso do `F4` significa que as sugestões automáticas estão
-ativadas; não é uma verificação de conectividade do servidor. O `F8` e o comando
-`:LlamaChat` enviam as mensagens para o endpoint local de chat e mostram as
-respostas no painel dedicado.
+O aviso do `F4` indica se a integração local está ativada; não é uma verificação
+de conectividade do servidor. Quando desativada, as sugestões e o chat não
+enviam solicitações. O serviço compartilhado do servidor continua ativo para o
+Micro.
 
 ### Chat no terminal
 
