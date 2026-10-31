@@ -61,6 +61,42 @@ executar `home-manager switch` separadamente.
 | `home.nix` | Ambiente declarativo do usuário `will`. | Use para preferências e programas de uso pessoal. |
 | `hardware-configuration.nix` | Discos, módulos de kernel e parâmetros detectados. | Não edite manualmente; regenere apenas após mudança de hardware. |
 
+## Atalhos do terminal
+
+Os comandos abaixo são aliases do Zsh configurados em `home.nix`.
+
+### NixOS e configuração
+
+| Alias | Ação | Observação |
+| --- | --- | --- |
+| `rebuild` | Aplica a configuração atual com `nixos-rebuild switch --flake /etc/nixos#konqi`. | Não atualiza as entradas do flake. |
+| `update` | Executa `nix flake update` e depois aplica o rebuild do sistema. | Atualiza `flake.lock`; revise as versões alteradas antes de usar. |
+| `nix-generations` | Lista as gerações do perfil do sistema. | Usa `sudo` e marca a geração atual com `(current)`. |
+| `nixgarbage` | Remove gerações antigas e os arquivos Nix sem referência. | Executa `nix-collect-garbage -d`; reduz as opções de rollback para gerações removidas. |
+| `nixcode` | Abre `/etc/nixos` no VS Code. | Atalho para editar esta configuração. |
+
+### Serviço de IA local
+
+| Alias | Ação |
+| --- | --- |
+| `llama-on` | Inicia o serviço `llama-micro-server` e carrega o modelo para uso pelos clientes locais. |
+| `llama-off` | Para o serviço e libera a memória usada pelo processo do modelo. |
+| `llama-status` | Mostra se o serviço está ativo, além do uso de recursos e dos logs recentes. |
+
+O serviço não inicia automaticamente. Inicie-o com `llama-on` antes de usar a
+IA no Micro, no Neovim ou no `nixai`; use `llama-off` quando terminar para
+descarregar o modelo. O toggle de IA dentro do Neovim controla apenas esse
+editor e não inicia nem para o serviço compartilhado.
+
+### Outros
+
+| Alias | Ação |
+| --- | --- |
+| `ll` | Lista arquivos, incluindo ocultos, em formato detalhado (`ls -la`). |
+
+Depois de alterar os aliases em `home.nix`, aplique o rebuild e abra um novo
+terminal para carregá-los.
+
 ## Recursos administrados
 
 ### Sistema
@@ -76,13 +112,9 @@ executar `home-manager switch` separadamente.
 
 - Zsh como shell padrão, com autosuggestions e syntax highlighting.
 - Prompt Starship e terminal Kitty com JetBrains Mono Nerd Font.
-- Aliases do Zsh: `rebuild`, `update`, `nixcode`, `nixgarbage`,
-  `nix-generations` e os controles `llama-on`, `llama-off` e `llama-status`.
+- Aliases do Zsh documentados em [Atalhos do terminal](#atalhos-do-terminal).
 - Ferramentas de desenvolvimento, terminal e desktop, incluindo Git, Node.js,
   Python, GCC, Rustup, Bun, Neovim, VS Code, tmux e LibreOffice.
-
-`nix-generations` lista as gerações do perfil do sistema e marca a geração
-ativa com `(current)`. O comando usa `sudo` para acessar o perfil NixOS.
 
 ## IA local com llama.cpp
 
