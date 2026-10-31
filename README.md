@@ -76,9 +76,13 @@ executar `home-manager switch` separadamente.
 
 - Zsh como shell padrão, com autosuggestions e syntax highlighting.
 - Prompt Starship e terminal Kitty com JetBrains Mono Nerd Font.
-- Aliases: `rebuild`, `update`, `nixcode` e `ll`.
+- Aliases do Zsh: `rebuild`, `update`, `nixcode`, `nixgarbage`,
+  `nix-generations` e os controles `llama-on`, `llama-off` e `llama-status`.
 - Ferramentas de desenvolvimento, terminal e desktop, incluindo Git, Node.js,
   Python, GCC, Rustup, Bun, Neovim, VS Code, tmux e LibreOffice.
+
+`nix-generations` lista as gerações do perfil do sistema e marca a geração
+ativa com `(current)`. O comando usa `sudo` para acessar o perfil NixOS.
 
 ## IA local com llama.cpp
 
@@ -132,7 +136,10 @@ enviados a esse serviço ficam na máquina.
 
 Ao ativar `programs.llama-cpp-nvim`, o Home Manager instala um plugin Lua do
 Micro, um pequeno cliente HTTP baseado em `curl` e `jq`, e um serviço de usuário
-que inicia o `llama-server` automaticamente. O servidor usa o modelo
+para o `llama-server`. O serviço não inicia automaticamente, para evitar o uso
+contínuo de memória quando a IA não está sendo usada. Os aliases `llama-on`,
+`llama-off` e `llama-status` iniciam, param e consultam o serviço. Ao pará-lo,
+o modelo é descarregado da RAM. O servidor usa o modelo
 Qwen2.5-Coder 1.5B Q8_0 e escuta somente em `127.0.0.1:9931`; o código e as
 perguntas enviados pelo editor não saem da máquina. A política CORS também é
 limitada a origens locais.
@@ -174,6 +181,9 @@ O aviso do `F4` indica se a integração local está ativada; não é uma verifi
 de conectividade do servidor. Quando desativada, as sugestões e o chat não
 enviam solicitações. O serviço compartilhado do servidor continua ativo para o
 Micro.
+
+O folding está desativado globalmente no Neovim. O Tree-sitter continua ativo
+para parsing e highlight, mas não configura dobras.
 
 ### Chat no terminal
 

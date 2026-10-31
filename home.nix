@@ -35,13 +35,13 @@
     ];
 
     initLua = ''
+      vim.opt.foldenable = false
+
       -- Treesitter (API nova/nativa, sem depender de nvim-treesitter.configs)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = { 'cpp', 'c', 'lua', 'nix' },
         callback = function()
           vim.treesitter.start()
-          vim.wo.foldmethod = 'expr'
-          vim.wo.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
         end,
       })
 
@@ -277,6 +277,10 @@
       update = "cd /etc/nixos && sudo nix flake update && sudo nixos-rebuild switch --flake /etc/nixos#konqi && cd -";
       nixcode = "code /etc/nixos";
       nixgarbage = "sudo nix-collect-garbage -d";
+      nix-generations = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
+      llama-on = "systemctl --user start llama-micro-server";
+      llama-off = "systemctl --user stop llama-micro-server";
+      llama-status = "systemctl --user status llama-micro-server";
     };
   };
 

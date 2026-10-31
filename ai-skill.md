@@ -86,7 +86,7 @@ Não confunda `system.stateVersion = "26.05"` com a versão corrente do NixOS: �
 
 O flake integra Home Manager como módulo do NixOS, usando os pacotes globais e instalando os pacotes do usuário. O `home.nix` configura o usuário `will` em `/home/will`; backups de arquivos substituídos recebem a extensão `.hm-backup`.
 
-- **Zsh:** autosuggestions e syntax highlighting. Aliases: `ll` (`ls -la`), `rebuild` (switch do flake `konqi`), `update` (atualiza o flake e aplica switch), `nixcode` (abre `/etc/nixos` no VS Code) e `nixgarbage` (coleta garbage do Nix).
+- **Zsh:** autosuggestions e syntax highlighting. Aliases: `ll` (`ls -la`), `rebuild` (switch do flake `konqi`), `update` (atualiza o flake e aplica switch), `nixcode` (abre `/etc/nixos` no VS Code), `nixgarbage` (coleta garbage do Nix), `nix-generations` (lista as gerações do perfil do sistema e marca `(current)`, usando `sudo`), `llama-on`, `llama-off` e `llama-status` (inicia, para e consulta o servidor local).
 - **Starship:** prompt com diretório, branch Git e usuário; sem linha adicional.
 - **Kitty:** fonte JetBrainsMono Nerd Font, tamanho 12. Home Manager também instala JetBrains Mono Nerd Font e Symbols Only.
 - **tmux:** configuração em `tmux.conf`; prefixo `Ctrl+A`, mouse habilitado, histórico de 10000 linhas, índices começando em 1, splits `|` e `-`, navegação de painéis `h/j/k/l`, mover painel com `H/J/K/L`, resize mode com `R`, zoom com `prefix+f`, nova janela com `Enter` ou `c`, fechar painel/janela com `x`/`X` e recarregar com `prefix+r`. `Alt+Left`/`Alt+Right` alternam janelas. Layouts: `prefix+e` horizontal, `prefix+E` vertical, `prefix+t` tiled, `prefix+m` main-vertical. A barra mostra sessão, título do painel, data/hora e janelas.
@@ -95,7 +95,7 @@ O flake integra Home Manager como módulo do NixOS, usando os pacotes globais e 
 
 ### Neovim
 
-O Home Manager habilita aliases `vi` e `vim`, Node.js, mas não Ruby nem Python no wrapper do Neovim, e plugins `nvim-lspconfig`, `nvim-cmp`, `cmp-nvim-lsp`, `cmp-buffer`, `cmp-path`, `LuaSnip`, `cmp_luasnip`, Telescope, Plenary e Treesitter. Treesitter inclui parsers C, C++, Lua e Nix; o autocmd ativa highlight e folding nesses tipos. O LSP configurado diretamente no `initLua` é `clangd` para C/C++.
+O Home Manager habilita aliases `vi` e `vim`, Node.js, mas não Ruby nem Python no wrapper do Neovim, e plugins `nvim-lspconfig`, `nvim-cmp`, `cmp-nvim-lsp`, `cmp-buffer`, `cmp-path`, `LuaSnip`, `cmp_luasnip`, Telescope, Plenary e Treesitter. Treesitter inclui parsers C, C++, Lua e Nix; o autocmd ativa o parsing e o highlight nesses tipos. O folding fica desativado globalmente (`vim.opt.foldenable = false`) e não há configuração de folding do Treesitter. O LSP configurado diretamente no `initLua` é `clangd` para C/C++.
 
 Pacotes extras do wrapper Neovim: `clang-tools`, `cmake`, `gdb`, `ripgrep` e `fd`. `nvim-cmp` usa fontes LSP, snippets, buffer e caminho; `Ctrl+Space` abre completion, `Enter` confirma, `Tab`/`Shift+Tab` navegam. Telescope: `<leader>ff` busca arquivos e `<leader>fg` pesquisa texto.
 
@@ -123,7 +123,7 @@ Na primeira ativação, o Home Manager tenta baixar o modelo (cerca de 1,6 GB); 
 
 `programs.llama-cpp-nvim.autoDownloadModels` fica habilitado por padrão. O download é idempotente e retoma arquivo parcial; falha de rede gera um aviso sem impedir toda a ativação. Para tentar novamente manualmente, execute `download-llama-models` no ambiente do usuário. O `llama.vim` é fixado no commit `e1ca1cc6af9da73f4ae21f810f33909d515592e6` via `pkgs.fetchFromGitHub`.
 
-Parâmetros do serviço systemd de usuário: alias do modelo `micro-local`, host `127.0.0.1`, porta `9931`, CORS `localhost`, contexto 4096, uma solicitação paralela, quatro threads normais e de batch, sem Web UI; reinicia em falha após cinco segundos. O wrapper está em `~/.local/share/llama-cpp/bin/llama-server`, mas o serviço chama diretamente o binário do pacote Nix.
+Parâmetros do serviço systemd de usuário: alias do modelo `micro-local`, host `127.0.0.1`, porta `9931`, CORS `localhost`, contexto 4096, uma solicitação paralela, quatro threads normais e de batch, sem Web UI; reinicia em falha após cinco segundos. O serviço não inicia automaticamente: isso evita manter o modelo ocupando memória quando a IA não está em uso. Os aliases Zsh `llama-on`, `llama-off` e `llama-status` iniciam, param e consultam o serviço. Ao parar o serviço, o modelo é descarregado da RAM; Micro, Neovim e `nixai` só conseguem consultar o modelo enquanto o serviço estiver ativo. O wrapper está em `~/.local/share/llama-cpp/bin/llama-server`, mas o serviço chama diretamente o binário do pacote Nix.
 
 Endpoints usados:
 
@@ -142,7 +142,7 @@ O cliente usa até 4000 caracteres antes e depois do cursor; conclusão pede 32 
 
 ### Neovim
 
-O `initLua` em `home.nix` configura o `llama.vim` e o `nvim-cmp`. `F4` alterna a integração de IA local e cancela uma solicitação de chat em andamento ao desativá-la. `F8` e `:LlamaChat` abrem o chat; `:LlamaChat pergunta` envia uma pergunta diretamente. A IA desligada no Neovim não desliga o serviço compartilhado, que continua disponível para os demais clientes.
+O `initLua` em `home.nix` configura o `llama.vim` e o `nvim-cmp`. `F4` e `:LlamaToggleAI` alternam toda a integração de IA local no Neovim. Ao desativá-la, o plugin é desligado, uma solicitação de chat em andamento é cancelada e novas mensagens de chat são bloqueadas. `F8` e `:LlamaChat` abrem o chat; `:LlamaChat pergunta` envia uma pergunta diretamente. A IA desligada no Neovim não desliga o serviço compartilhado, que continua disponível para Micro e `nixai` enquanto estiver ativo.
 
 Parâmetros FIM do Neovim: endpoint configurado `/infill`, debounce de 700 ms, previsão de 64 tokens, janela circular de quatro chunks de 32 tokens e exibição de informações. O chat usa `/v1/chat/completions`, até 512 tokens, temperatura 0,3, timeout curl de 120 segundos e histórico em memória durante a sessão.
 
@@ -160,11 +160,22 @@ Use `/sair`, `/exit` ou `/quit` para terminar.
 ## Diagnóstico da IA local
 
 ```sh
+llama-on
+llama-off
+llama-status
 systemctl --user status llama-micro-server
 curl -fsS http://127.0.0.1:9931/health
 ```
 
 Se o servidor não responder, confira se o serviço está ativo, se o modelo existe no caminho esperado e se o download da primeira ativação terminou. O cliente precisa de `curl` e `jq`, instalados pelo módulo.
+
+## Gerações do NixOS
+
+O alias `nix-generations` executa `sudo nix-env --list-generations` sobre o
+perfil `/nix/var/nix/profiles/system`. A saída lista as gerações disponíveis e
+marca a geração usada atualmente com `(current)`. O alias pede autenticação de
+administrador porque o perfil do sistema não pode ser consultado pelo usuário
+sem privilégios.
 
 ## Regras para IAs que alterarem este repositório
 

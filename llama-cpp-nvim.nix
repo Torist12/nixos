@@ -236,7 +236,6 @@ in
         Restart = "on-failure";
         RestartSec = "5s";
       };
-      Install.WantedBy = [ "default.target" ];
     };
 
     # Baixa modelos na ativacao (idempotente; falha de rede so avisa).
