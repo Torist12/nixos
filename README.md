@@ -88,6 +88,68 @@ BRANCH=dev bash /tmp/cfg/bootstrap.sh
 
 O `/tmp/cfg` foi clonado apenas para facilitar a execução inicial do script. O bootstrap real clona a configuração para `/etc/nixos` e aplica o flake do host.
 
+### Como o `bootstrap.sh` funciona
+
+O script é um helper de bootstrap para uma máquina nova já com NixOS instalado. Ele não reescreve a configuração manualmente; ele prepara e aplica o repositório declarativo em `/etc/nixos`.
+
+A sequência executada é:
+
+1. valida se o usuário está executando como usuário normal e não como root;
+2. confirma que o sistema é NixOS lendo `/etc/os-release`;
+3. verifica que `git` e `sudo` existem;
+4. testa acesso ao repositório remoto com `git ls-remote` e confirma que a branch pedida existe;
+5. em `--dry-run`, interrompe antes de alterar qualquer coisa e executa `nixos-rebuild dry-build` apenas para validação;
+6. se `/etc/nixos` já existir, cria um backup em `/etc/nixos.bak-<timestamp>` sem apagar nada antes do backup;
+7. clona o repositório na branch escolhida para `/etc/nixos`;
+8. muda a posse do diretório para o usuário atual com `chown -R "$USER":users /etc/nixos` para evitar erros de permissão em `.git/objects`;
+9. valida o host no flake com `nix eval` e para se o host não existir;
+10. gera `hardware-configuration.nix` para a máquina atual com `nixos-generate-config --show-hardware-config`;
+11. usa `git add -N` para que o flake enxergue esse arquivo mesmo se ele estiver ignorado ou ainda não rastreado;
+12. executa `sudo nixos-rebuild dry-build --flake ...` e só então aplica `switch`;
+13. imprime um checklist final com itens que não vêm do repositório por intenção.
+
+Em outras palavras, ele faz o equivalente a "instalar a configuração declarativa da máquina em um ambiente já preparado para o NixOS" sem exigir ações manuais repetitivas.
+
+### Exemplos de uso
+
+Executar com a branch padrão:
+
+```bash
+bash /tmp/cfg/bootstrap.sh
+```
+
+Executar a branch `dev`:
+
+```bash
+BRANCH=dev bash /tmp/cfg/bootstrap.sh
+```
+
+Usar outro host do flake:
+
+```bash
+HOST=mini bash /tmp/cfg/bootstrap.sh
+```
+
+Validar sem tocar em `/etc/nixos`:
+
+```bash
+bash /tmp/cfg/bootstrap.sh --dry-run
+```
+
+Preparar tudo, mas não aplicar o rebuild:
+
+```bash
+bash /tmp/cfg/bootstrap.sh --no-switch
+```
+
+Passar tudo por flags explícitas:
+
+```bash
+bash /tmp/cfg/bootstrap.sh --repo https://github.com/Torist12/nixos.git --branch dev --host konqi --dry-run
+```
+
+A precedência é sempre: flag > variável de ambiente > valor padrão.
+
 ### Variáveis e flags
 
 | Nome | Tipo | Padrão | Descrição |
