@@ -9,21 +9,6 @@ description: "Contexto prático do NixOS konqi para IAs que precisam entender, d
 
 Use este documento como contexto rápido antes de responder ou alterar este repositório. Ele descreve a configuração declarativa do computador `konqi` e a integração de IA local. Confirme sempre os arquivos atuais antes de assumir que este resumo continua atualizado.
 
-## Atualização de contexto e o que foi adicionado
-
-Esta skill foi revisada contra os arquivos reais do repositório em `2026-11-05` para refletir o estado atual do sistema e evitar que a documentação fique apenas como uma hipótese geral.
-
-Adições e refinamentos incorporados neste documento:
-
-- checagem do estado real de `flake.nix`, `configuration.nix`, `home.nix`, `llama-cpp-nvim.nix` e `micro-llama.lua`;
-- registro explícito do modelo GGUF em uso, do host, da porta e do endereço local do servidor;
-- documentação dos aliases do shell e do serviço de IA local, alinhados com a configuração ativa;
-- observação de pontos de atenção reais do repo, como o uso do `llama.vim` fixado em commit específico e os executáveis de LSP que precisam ser validados no PATH;
-- advertência para que a IA não assuma que a configuração documental permanece estática sem revisar os arquivos atuais;
-- regras de operação para alterações no repositório, enfatizando a separação entre sistema e usuário e a necessidade de validar antes de mudar endpoints, caminhos ou modelos.
-
-Em outras palavras, o documento agora funciona como um contexto de diagnóstico e não apenas como uma visão estática do projeto.
-
 ## Visão geral
 
 Este repositório configura um computador NixOS `x86_64-linux`, com o host `konqi`, usando Nix Flakes e Home Manager integrado ao rebuild do sistema.
@@ -48,8 +33,11 @@ A fonte de verdade é a configuração versionada em `/etc/nixos`. Mudanças dec
 - `llama-cpp-nvim.nix`: módulo Home Manager que prepara llama.cpp, servidor, modelo, plugin do Micro, plugin do Neovim e comando de chat `nixai`.
 - `micro-llama.lua`: cliente Lua do Micro para pedir sugestões e conversar com o servidor.
 - `micro-llama-repo.json`: metadados do plugin Lua do Micro.
+- `bootstrap.sh`: bootstrap de uma máquina nova com NixOS instalado; clona a configuração em `/etc/nixos`, gera o hardware da máquina atual e aplica o flake.
 - `tmux.conf`: configuração do tmux lida por `home.nix`.
 - `README.md`: documentação extensa do repositório; confira os arquivos de configuração quando houver divergência.
+
+Uma nota importante sobre o bootstrap: em máquina nova, o script valida a branch remota, o host do flake e o hardware local antes de aplicar a configuração, e usa `git add -N`/`git add -N -f` para que o `hardware-configuration.nix` gerado fique visível ao flake sem cometer mudança.
 
 No flake, Home Manager usa o mesmo `nixpkgs` (`useGlobalPkgs = true`), instala pacotes via usuário (`useUserPackages = true`) e salva backups com extensão `.hm-backup`. O módulo de Home Manager aplica `home.nix` para `will` durante o mesmo `nixos-rebuild`.
 

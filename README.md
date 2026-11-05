@@ -60,6 +60,102 @@ executar `home-manager switch` separadamente.
 | `configuration.nix` | Opções de sistema, serviços, usuário, rede e pacotes globais. | Use para recursos necessários ao host ou a todos os usuários. |
 | `home.nix` | Ambiente declarativo do usuário `will`. | Use para preferências e programas de uso pessoal. |
 | `hardware-configuration.nix` | Discos, módulos de kernel e parâmetros detectados. | Não edite manualmente; regenere apenas após mudança de hardware. |
+| `bootstrap.sh` | Script para instalar a configuração em uma máquina nova e aplicar o flake. | Use para bootstrap, sem alterar o flake nem a configuração de sistema manualmente. |
+
+## Instalação em uma máquina nova (bootstrap)
+
+Este script prepara uma máquina nova já com NixOS instalado para clonar a configuração declarativa em `/etc/nixos`, gerar o hardware da máquina atual e aplicar o flake do host `konqi`.
+
+### Pré-requisitos
+
+- NixOS já instalado em máquina nova ou em ambiente mínimo.
+- Usuário `will` criado no instalador, conforme esperado pela configuração do repositório.
+- Internet funcional e acesso ao repositório remoto.
+- Repositório público ou autenticação do GitHub (`gh auth login`) para acesso a repositórios privados.
+
+### Uso básico
+
+```bash
+nix-shell -p git --run "git clone https://github.com/Torist12/nixos.git /tmp/cfg"
+bash /tmp/cfg/bootstrap.sh
+```
+
+Para usar a branch `dev`:
+
+```bash
+BRANCH=dev bash /tmp/cfg/bootstrap.sh
+```
+
+O `/tmp/cfg` foi clonado apenas para facilitar a execução inicial do script. O bootstrap real clona a configuração para `/etc/nixos` e aplica o flake do host.
+
+### Variáveis e flags
+
+| Nome | Tipo | Padrão | Descrição |
+| --- | --- | --- | --- |
+| `REPO` | variável de ambiente | `https://github.com/Torist12/nixos.git` | repositório remoto a clonar |
+| `BRANCH` | variável de ambiente | `master` | branch a ser clonada |
+| `HOST` | variável de ambiente | `konqi` | host do flake em `nixosConfigurations` |
+| `--repo` | flag | valor do `REPO` | sobrescreve o repositório |
+| `--branch` | flag | valor do `BRANCH` | sobrescreve a branch |
+| `--host` | flag | valor do `HOST` | sobrescreve o nome do host |
+| `--dry-run` | flag | off | valida e executa um `nixos-rebuild dry-build`, sem mover ou clonar em `/etc/nixos` |
+| `--no-switch` | flag | off | prepara tudo e valida sem aplicar o rebuild |
+| `-h` / `--help` | flag | off | mostra a ajuda do script |
+
+### Reinstalar no mesmo hardware
+
+```bash
+sudo nixos-rebuild switch --flake github:Torist12/nixos/master#konqi
+sudo nixos-rebuild switch --flake github:Torist12/nixos/dev#konqi
+```
+
+### Fluxo do bootstrap
+
+```mermaid
+flowchart TD
+    A[Verifica usuário, NixOS, git e sudo] --> B[Confirma internet e branch no remoto]
+    B --> C{Existe /etc/nixos?}
+    C -- sim --> D[Mova para /etc/nixos.bak-timestamp]
+    C -- não --> E[Clone o repositório em /etc/nixos]
+    D --> E
+    E --> F[Chown do diretório para o usuário atual]
+    F --> G[Gerar hardware-configuration.nix da máquina atual]
+    G --> H[git add -N + flake visibility]
+    H --> I[nixos-rebuild dry-build --flake]
+    I --> J{--no-switch?}
+    J -- sim --> K[Termina com checklist]
+    J -- não --> L[Switch do host]
+    L --> K
+```
+
+### O que não vem do repositório
+
+Os itens abaixo são esperados em uma máquina nova e não devem ser assumidos como parte deste repositório, por intenção explícita:
+
+- `sudo passwd will`
+- `fprintd-enroll`
+- `sudo tailscale up`
+- conectar as APIs no OpenCode com `/connect`
+- `llama-on`, se quiser a IA local. O modelo de cerca de 1,6 GB baixa na primeira ativação.
+
+### Troubleshooting
+
+- Erro de permissão em `.git/objects`: normalmente o diretório foi clonado como root. Correção: `sudo chown -R "$USER":users /etc/nixos` e confirme que a árvore de `.git` ficou sob o usuário atual.
+- `file hardware-configuration.nix not found`: o flake só enxerga arquivos rastreados. O script usa `git add -N` e `git add -N -f` quando necessário. Se isso falhar, o motivo geralmente é um `.gitignore` agressivo ou um checkout incompleto.
+- Host não existe no flake: confirme o nome em `nixosConfigurations` e use `HOST=<nome> ./bootstrap.sh` ou `--host <nome>`.
+- Branch não existe no remoto: confirme o nome da branch e o acesso ao repositório; o script valida isso com `git ls-remote --heads` antes de clonar.
+- Sem internet / `git` ausente / repositório privado: o script informa o problema explicitamente; para repositórios privados, `gh auth login` é a alternativa mais simples.
+- Primeiro rebuild demorado: é esperado. O script roda `nixos-rebuild dry-build` antes do `switch` e, em seguida, a aplicação final da configuração. O tempo pode ser alto na primeira execução.
+
+### Como adicionar uma máquina nova
+
+Se você quiser criar outra máquina declarativa no flake, adicione um novo bloco em `nixosConfigurations` e depois use:
+
+```bash
+HOST=<nome-da-maquina> bash bootstrap.sh --host <nome-da-maquina>
+```
+
+O script continua usando o mesmo padrão: valida branch, host, hardware e aplica a configuração do flake selecionado.
 
 ## Atalhos do terminal
 
